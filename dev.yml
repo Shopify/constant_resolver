@@ -3,21 +3,17 @@ name: constant-resolver
 type: ruby
 
 up:
-  - homebrew:
-    - openssl
-    # - another_package
-  - ruby: 2.5.3
+  - ruby: 2.6.2
   - bundler
 
 commands:
-  console:
-    desc:   'start a console'
-    run:    bin/console
-  run:
-    desc:   'start the application'
-    run:    bin/run
   test:
     syntax:
       argument: file
       optional: args...
-    run: bin/testunit
+    run: |
+      if [[ $# -eq 0 ]]; then
+        bundle exec rake test
+      else
+        bundle exec ruby -I test "$@"
+      fi
