@@ -16,7 +16,7 @@ steps:
 - label: Lint Ruby
   run:
   - bundle: ~
-  - budnle exec rubocop
+  - bundle exec rubocop
   cache:
   - tmp/rubocop
   timeout: 1m
