@@ -1,4 +1,4 @@
-# ConstantResolver
+# ConstantResolver [![Build Status](https://badge.buildkite.com/af9f619f65b3cc8a13093c17d8049035ff029b049cca8d95d4.svg)](https://buildkite.com/shopify/constant-resolver)
 
 Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/constant_resolver`. To experiment with that code, run `bin/console` for an interactive prompt.
 
