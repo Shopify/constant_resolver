@@ -1,0 +1,22 @@
+containers:
+  default:
+    docker: circleci/ruby:2.6.2
+
+steps:
+- label: 'Prepare dependencies'
+  run:
+    - bundle: ~
+  timeout: 5m
+- wait
+- label: Tests
+  run:
+    - bundle: ~
+    - bundle exec rake
+  timeout: 2m
+- label: Lint Ruby
+  run:
+  - bundle: ~
+  - bundle exec rubocop
+  cache:
+  - tmp/rubocop
+  timeout: 1m
