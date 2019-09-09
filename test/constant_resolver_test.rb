@@ -26,11 +26,6 @@ class ConstantResolverTest < Minitest::Test
     assert_equal("app/models/order.rb", constant.location)
   end
 
-  def test_does_not_discover_constant_with_invalid_casing
-    constant = @resolver.resolve("ORDER")
-    assert_nil(constant)
-  end
-
   def test_understands_nested_load_paths
     constant = @resolver.resolve("Entry")
     assert_equal("::Entry", constant.name)
@@ -96,6 +91,21 @@ class ConstantResolverTest < Minitest::Test
     assert_equal("app/models/entry.rb", constant.location)
   end
 
+  def test_understands_acronyms
+    constant = @resolver.resolve(
+      "AcronymsMVP::MVPAcronym"
+    )
+    assert_equal("::AcronymsMVP::MVPAcronym", constant.name)
+    assert_equal("app/models/acronyms_mvp/mvp_acronym.rb", constant.location)
+
+    constant = @resolver.resolve(
+      "MVPAcronym",
+      current_namespace_path: ["AcronymsMVP"]
+    )
+    assert_equal("::AcronymsMVP::MVPAcronym", constant.name)
+    assert_equal("app/models/acronyms_mvp/mvp_acronym.rb", constant.location)
+  end
+
   def test_raises_if_ambiguous_file_path_structure
     resolver = ConstantResolver.new(@resolver.config.merge(
       root_path: "test/fixtures/constant_discovery/invalid/"
@@ -104,7 +114,7 @@ class ConstantResolverTest < Minitest::Test
       e = assert_raises(ConstantResolver::Error) do
         resolver.resolve("AnythingReally")
       end
-      assert_match("ERROR: 'Order' could refer to any", e.message)
+      assert_match("ERROR: 'order' could refer to any", e.message)
     end
   end
 

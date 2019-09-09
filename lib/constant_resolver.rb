@@ -71,20 +71,20 @@ class ConstantResolver
     @load_paths.each do |load_path|
       Dir[@root_path + load_path + "**/*.rb"].each do |file_path|
         root_relative_path = file_path.sub(/^#{@root_path}/, "")
-        const_name = camelize(root_relative_path.sub(/^#{load_path}/, "").sub(/.rb$/, ""))
-        existing_entry = @file_map[const_name]
+        underscore_constant_name = root_relative_path.sub(/^#{load_path}/, "").sub(/.rb$/, "")
+        existing_entry = @file_map[underscore_constant_name]
 
         if existing_entry
-          duplicate_files[const_name] ||= [existing_entry]
-          duplicate_files[const_name] += [root_relative_path]
+          duplicate_files[underscore_constant_name] ||= [existing_entry]
+          duplicate_files[underscore_constant_name] += [root_relative_path]
         end
-        @file_map[const_name] = root_relative_path
+        @file_map[underscore_constant_name] = root_relative_path
       end
     end
 
     unless duplicate_files.empty?
-      message = duplicate_files.map do |const_name, full_paths|
-        "ERROR: '#{const_name}' could refer to any of\n#{full_paths.map { |p| '  ' + p }.join("\n")}"
+      message = duplicate_files.map do |underscore_constant_name, full_paths|
+        "ERROR: '#{underscore_constant_name}' could refer to any of\n#{full_paths.map { |p| '  ' + p }.join("\n")}"
       end.join("\n")
       raise(Error, message)
     end
@@ -110,7 +110,7 @@ class ConstantResolver
   def resolve_traversing_namespace_path(const_name, current_namespace_path)
     fully_qualified_name_guess = (current_namespace_path + [const_name]).join("::")
 
-    location = file_map[fully_qualified_name_guess]
+    location = lookup(fully_qualified_name_guess)
     if location || fully_qualified_name_guess == const_name
       [current_namespace_path, location]
     else
@@ -118,10 +118,18 @@ class ConstantResolver
     end
   end
 
-  def camelize(string)
-    string = string.sub(/^[a-z\d]*/, &:capitalize)
-    string.gsub!(%r{(?:_|(/))([a-z\d]*)}i) { "#{Regexp.last_match(1)}#{Regexp.last_match(2).capitalize}" }
-    string.gsub!("/", "::")
-    string
+  def lookup(constant_name)
+    file_map[underscore(constant_name)]
+  end
+
+  # stolen from ActiveSupport::Inflector#underscore
+  def underscore(camel_cased_word)
+    return camel_cased_word unless /[A-Z-]|::/.match?(camel_cased_word)
+    word = camel_cased_word.to_s.gsub("::", "/")
+    word.gsub!(/([A-Z\d]+)([A-Z][a-z])/, '\1_\2')
+    word.gsub!(/([a-z\d])([A-Z])/, '\1_\2')
+    word.tr!("-", "_")
+    word.downcase!
+    word
   end
 end
