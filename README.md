@@ -1,4 +1,4 @@
-# ConstantResolver [![Build Status](https://badge.buildkite.com/af9f619f65b3cc8a13093c17d8049035ff029b049cca8d95d4.svg)](https://buildkite.com/shopify/constant-resolver)
+# ConstantResolver [![Build Status](https://badge.buildkite.com/af9f619f65b3cc8a13093c17d8049035ff029b049cca8d95d4.svg?branch=master)](https://buildkite.com/shopify/constant-resolver/builds?branch=master)
 
 `ConstantResolver` resolves partially qualified constant reference to the fully qualified name and the path of the file defining it. It does not load the files to do that, its inference engine purely works on file paths and constant names.
 
