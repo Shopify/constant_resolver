@@ -106,6 +106,16 @@ class ConstantResolverTest < Minitest::Test
     assert_equal("app/models/acronyms_mvp/mvp_acronym.rb", constant.location)
   end
 
+  def test_resolves_nested_acronym_constant_to_parent_namespace
+    constant = @resolver.resolve(
+      "ORDER",
+      current_namespace_path: ["Sales", "Entry"]
+    )
+
+    # does not resolve to order.rb
+    assert_nil(constant)
+  end
+
   def test_raises_if_ambiguous_file_path_structure
     resolver = ConstantResolver.new(@resolver.config.merge(
       root_path: "test/fixtures/constant_discovery/invalid/"
