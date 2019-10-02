@@ -2,6 +2,6 @@
 
 module Sales
   module Errors
-    SomethingWentWrong = Class.new(Exception)
+    SomethingWentWrong = Class.new(RuntimeError)
   end
 end
