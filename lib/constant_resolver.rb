@@ -70,13 +70,13 @@ class ConstantResolver
 
     @load_paths.each do |load_path|
       Dir[@root_path + load_path + "**/*.rb"].each do |file_path|
-        root_relative_path = file_path.sub(/^#{@root_path}/, "")
-        const_name = camelize(root_relative_path.sub(/^#{load_path}/, "").sub(/.rb$/, ""))
+        root_relative_path = file_path.delete_prefix!(@root_path)
+        const_name = camelize(root_relative_path.delete_prefix(load_path).delete_suffix!(".rb"))
         existing_entry = @file_map[const_name]
 
         if existing_entry
           duplicate_files[const_name] ||= [existing_entry]
-          duplicate_files[const_name] += [root_relative_path]
+          duplicate_files[const_name] << root_relative_path
         end
         @file_map[const_name] = root_relative_path
       end
