@@ -16,8 +16,18 @@ class ConstantResolver
   class Error < StandardError; end
   ConstantContext = Struct.new(:name, :location)
 
+  class DefaultInflector
+    def camelize(string)
+      string = string.sub(/^[a-z\d]*/, &:capitalize)
+      string.gsub!(%r{(?:_|(/))([a-z\d]*)}i) { "#{Regexp.last_match(1)}#{Regexp.last_match(2).capitalize}" }
+      string.gsub!("/", "::")
+      string
+    end
+  end
+
   # @param root_path [String] The root path of the application to analyze
   # @param load_paths [Array<String>] The autoload paths of the application.
+  # @param inflector [Object] Any object that implements a `camelize` function.
   #
   # @example usage in a Rails app
   #   config = Rails.application.config
@@ -27,13 +37,14 @@ class ConstantResolver
   #     root_path: Rails.root.to_s,
   #     load_paths: load_paths
   #   )
-  def initialize(root_path:, load_paths:)
+  def initialize(root_path:, load_paths:, inflector: DefaultInflector.new)
     root_path += "/" unless root_path.end_with?("/")
     load_paths = load_paths.map { |p| p.end_with?("/") ? p : p + "/" }.uniq
 
     @root_path = root_path
     @load_paths = load_paths
     @file_map = nil
+    @inflector = inflector
   end
 
   def config
@@ -71,7 +82,7 @@ class ConstantResolver
     @load_paths.each do |load_path|
       Dir[@root_path + load_path + "**/*.rb"].each do |file_path|
         root_relative_path = file_path.delete_prefix!(@root_path)
-        const_name = camelize(root_relative_path.delete_prefix(load_path).delete_suffix!(".rb"))
+        const_name = @inflector.camelize(root_relative_path.delete_prefix(load_path).delete_suffix!(".rb"))
         existing_entry = @file_map[const_name]
 
         if existing_entry
@@ -116,12 +127,5 @@ class ConstantResolver
     else
       resolve_traversing_namespace_path(const_name, current_namespace_path[0..-2])
     end
-  end
-
-  def camelize(string)
-    string = string.sub(/^[a-z\d]*/, &:capitalize)
-    string.gsub!(%r{(?:_|(/))([a-z\d]*)}i) { "#{Regexp.last_match(1)}#{Regexp.last_match(2).capitalize}" }
-    string.gsub!("/", "::")
-    string
   end
 end

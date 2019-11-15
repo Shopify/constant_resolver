@@ -3,6 +3,20 @@
 require "test_helper"
 
 class ConstantResolverTest < Minitest::Test
+  class OverrideInflector < ConstantResolver::DefaultInflector
+    def initialize(overrides)
+      @overrides = overrides
+    end
+
+    def camelize(string)
+      string = string.dup
+      @overrides.each do |before, after|
+        string.gsub!(/\b#{before}\b/, after)
+      end
+      super(string)
+    end
+  end
+
   def setup
     @resolver = ConstantResolver.new(
       root_path: "test/fixtures/constant_discovery/valid/",
@@ -12,6 +26,7 @@ class ConstantResolverTest < Minitest::Test
         "app/models/concerns",
         "app/services",
       ],
+      inflector: OverrideInflector.new("graphql" => "GraphQL")
     )
     super
   end
@@ -54,6 +69,13 @@ class ConstantResolverTest < Minitest::Test
     )
     assert_equal("::Sales::Errors::SomethingWentWrong", constant.name)
     assert_equal("app/public/sales/errors.rb", constant.location)
+  end
+
+  def test_discovers_constants_using_custom_inflector
+    constant = @resolver.resolve("GraphQL::QueryRoot")
+
+    assert_equal("::GraphQL::QueryRoot", constant.name)
+    assert_equal("app/models/graphql/query_root.rb", constant.location)
   end
 
   def test_discovers_constants_that_are_partially_qualified_inferring_their_full_qualification_from_parent_namespace
