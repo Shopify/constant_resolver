@@ -20,7 +20,30 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+### Initialize the resolver
+
+Initialize a `ConstantResolver` with a root path and load paths:
+
+```ruby
+resolver = ConstantResolver.new(
+  root_path: "/app",
+  load_paths: [
+    "/app/models",
+    "/app/services",
+  ]
+)
+```
+
+### Resolve a constant
+
+Resolve a constant from the contents of your load paths:
+
+```ruby
+context = resolver.resolve("Some::Nested::Model")
+
+context.name     # => "::Some::Nested::Model"
+context.location # => "models/some/nested/model.rb"
+```
 
 ## Development
 
