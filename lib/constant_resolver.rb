@@ -14,7 +14,7 @@ require "constant_resolver/version"
 #   constant with the same name exists in the inheriting class, and this view is sufficient for all our use cases.
 class ConstantResolver
   class Error < StandardError; end
-  ConstantContext = Struct.new(:name, :location)
+  class ConstantContext < Struct.new(:name, :location); end
 
   class DefaultInflector
     def camelize(string)
@@ -24,6 +24,8 @@ class ConstantResolver
       string
     end
   end
+
+  private_constant :DefaultInflector
 
   # @param root_path [String] The root path of the application to analyze
   # @param load_paths [Array<String>] The autoload paths of the application.
@@ -47,13 +49,6 @@ class ConstantResolver
     @inflector = inflector
   end
 
-  def config
-    {
-      root_path: @root_path,
-      load_paths: @load_paths,
-    }
-  end
-
   # Resolve a constant via its name.
   # If the name is partially qualified, we need the current namespace path to correctly infer its full name
   #
@@ -73,7 +68,9 @@ class ConstantResolver
     )
   end
 
-  # maps constants to file paths
+  # Maps constant names to file paths.
+  #
+  # @return [Hash<String, String>]
   def file_map
     return @file_map if @file_map
     @file_map = {}
@@ -101,6 +98,14 @@ class ConstantResolver
     end
     raise(Error, "could not find any files") if @file_map.empty?
     @file_map
+  end
+
+  # @api private
+  def config
+    {
+      root_path: @root_path,
+      load_paths: @load_paths,
+    }
   end
 
   private
