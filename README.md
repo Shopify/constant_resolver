@@ -30,12 +30,6 @@ After checking out the repo, run `bundle` to install dependencies. Then, run `ra
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/shopify/constant_resolver.
 
-### Cutting a release to Package Cloud
-
-1. bump version in `lib/constant_resolver/version.rb`
-2. tag the version bump commit (e.g. `git tag v0.1.3 && git push --tags`)
-3. deploy in [shipit](https://shipit.shopify.io/shopify/constant_resolver/production)
-
 ## License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
