@@ -2,6 +2,8 @@
 
 `ConstantResolver` resolves partially qualified constant reference to the fully qualified name and the path of the file defining it. It does not load the files to do that, its inference engine purely works on file paths and constant names.
 
+`ConstantResolver` uses the same assumptions as [Rails' code loader, `Zeitwerk`](https://github.com/fxn/zeitwerk) to infer constant locations. Please see Zeitwerk's documentation on [file structure](https://github.com/fxn/zeitwerk#file-structure) and [inflection](https://github.com/fxn/zeitwerk#zeitwerkinflector) for more information.
+
 ## Installation
 
 Add this line to your application's Gemfile:
