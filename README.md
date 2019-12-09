@@ -53,7 +53,7 @@ After checking out the repo, run `bundle` to install dependencies. Then, run `ra
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/shopify/constant_resolver.
+Bug reports and pull requests are welcome on GitHub at https://github.com/Shopify/constant_resolver.
 
 ## License
 
