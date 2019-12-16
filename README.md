@@ -1,4 +1,4 @@
-# ConstantResolver [![Build Status](https://github.com/Shopify/constant_resolver/workflows/ci/badge.svg)](https://github.com/Shopify/constant_resolver/actions)
+# ConstantResolver [![Build Status](https://github.com/Shopify/constant_resolver/workflows/CI/badge.svg)](https://github.com/Shopify/constant_resolver/actions?query=workflow%3ACI)
 
 `ConstantResolver` resolves partially qualified constant reference to the fully qualified name and the path of the file defining it. It does not load the files to do that, its inference engine purely works on file paths and constant names.
 
