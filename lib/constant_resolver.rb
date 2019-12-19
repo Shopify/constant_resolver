@@ -96,7 +96,6 @@ class ConstantResolver
       end.join("\n")
       raise(Error, message)
     end
-    raise(Error, "could not find any files") if @file_map.empty?
     @file_map
   end
 

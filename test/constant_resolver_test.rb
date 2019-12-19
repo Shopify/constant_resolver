@@ -135,17 +135,5 @@ class ConstantResolver
         assert_match("ERROR: 'Order' could refer to any", e.message)
       end
     end
-
-    def test_raises_if_no_files
-      resolver = ConstantResolver.new(@resolver.config.merge(
-        root_path: "test/fixtures/constant_discovery/empty/"
-      ))
-      begin
-        e = assert_raises(ConstantResolver::Error) do
-          resolver.resolve("AnythingReally")
-        end
-        assert_match("could not find any files", e.message)
-      end
-    end
   end
 end
