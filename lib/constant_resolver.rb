@@ -77,7 +77,7 @@ class ConstantResolver
     duplicate_files = {}
 
     @load_paths.each do |load_path|
-      Dir[@root_path + load_path + "**/*.rb"].each do |file_path|
+      Dir[glob_path(load_path)].each do |file_path|
         root_relative_path = file_path.delete_prefix!(@root_path)
         const_name = @inflector.camelize(root_relative_path.delete_prefix(load_path).delete_suffix!(".rb"))
         existing_entry = @file_map[const_name]
@@ -90,13 +90,22 @@ class ConstantResolver
       end
     end
 
-    unless duplicate_files.empty?
-      message = duplicate_files.map do |const_name, full_paths|
-        "ERROR: '#{const_name}' could refer to any of\n#{full_paths.map { |p| '  ' + p }.join("\n")}"
-      end.join("\n")
-      raise(Error, message)
+    if duplicate_files.any?
+      raise(Error, <<~MSG)
+        Ambiguous constant definition:
+
+        #{duplicate_files.map { |const_name, paths| ambiguous_constant_message(const_name, paths) }.join("\n")}
+      MSG
     end
-    raise(Error, "could not find any files") if @file_map.empty?
+
+    if @file_map.empty?
+      raise(Error, <<~MSG)
+        Could not find any ruby files. Searched in:
+
+        - #{@load_paths.map { |load_path| glob_path(load_path) }.join("\n- ")}
+      MSG
+    end
+
     @file_map
   end
 
@@ -109,6 +118,17 @@ class ConstantResolver
   end
 
   private
+
+  def ambiguous_constant_message(const_name, paths)
+    <<~MSG.chomp
+      "#{const_name}" could refer to any of
+        #{paths.join("\n  ")}
+    MSG
+  end
+
+  def glob_path(path)
+    @root_path + path + "**/*.rb"
+  end
 
   def resolve_constant(const_name, current_namespace_path, original_name: const_name)
     namespace, location = resolve_traversing_namespace_path(const_name, current_namespace_path)

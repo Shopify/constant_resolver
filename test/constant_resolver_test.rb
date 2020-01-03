@@ -132,7 +132,13 @@ class ConstantResolver
         e = assert_raises(ConstantResolver::Error) do
           resolver.resolve("AnythingReally")
         end
-        assert_match("ERROR: 'Order' could refer to any", e.message)
+        assert_equal(<<~MSG, e.message)
+          Ambiguous constant definition:
+
+          "Order" could refer to any of
+            app/models/order.rb
+            app/services/order.rb
+        MSG
       end
     end
 
@@ -144,7 +150,14 @@ class ConstantResolver
         e = assert_raises(ConstantResolver::Error) do
           resolver.resolve("AnythingReally")
         end
-        assert_match("could not find any files", e.message)
+        assert_equal(<<~MSG, e.message)
+          Could not find any ruby files. Searched in:
+
+          - test/fixtures/constant_discovery/empty/app/public/**/*.rb
+          - test/fixtures/constant_discovery/empty/app/models/**/*.rb
+          - test/fixtures/constant_discovery/empty/app/models/concerns/**/*.rb
+          - test/fixtures/constant_discovery/empty/app/services/**/*.rb
+        MSG
       end
     end
   end
