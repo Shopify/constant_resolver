@@ -15,7 +15,7 @@ module ConstantResolver
           .with("test_file.rb")
           .returns( "class Foo; end")
 
-        result = @parser.parse("test_file.rb")
+        result = @parser.parse_file("test_file.rb")
 
         assert_kind_of(::Parser::AST::Node, result)
       end
@@ -27,7 +27,7 @@ module ConstantResolver
           .returns("class not+valid-ruby<>")
 
         assert_raises(Parsers::SyntaxError) do
-          @parser.parse("test_file.rb")
+          @parser.parse_file("test_file.rb")
         end
       end
     end

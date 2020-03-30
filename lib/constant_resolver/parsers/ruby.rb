@@ -12,12 +12,16 @@ module ConstantResolver
         @parser_class = parser_class
       end
 
-      def parse(file_path)
-        buffer = ::Parser::Source::Buffer.new(file_path)
-        buffer.source = File.read(file_path)
+      def parse_file(file_path)
+        parse(File.read(file_path), name: file_path)
+      end
+
+      def parse(source, name: "(string)")
+        buffer = ::Parser::Source::Buffer.new(name)
+        buffer.source = source
         new_parser.parse(buffer)
       rescue ::Parser::SyntaxError => e
-        raise Parsers::SyntaxError, "could not parse #{file_path}: #{e}"
+        raise Parsers::SyntaxError, "could not parse #{name}: #{e}"
       end
 
       def new_parser
