@@ -16,5 +16,6 @@ module ConstantResolver
 end
 
 require "constant_resolver/default_inflector"
+require "constant_resolver/parsers"
 require "constant_resolver/resolver"
 require "constant_resolver/version"
