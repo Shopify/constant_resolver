@@ -10,8 +10,9 @@ module ConstantResolver
     end
 
     def defined?(constant_name, namespace_path: [])
-      qualifications = reference_qualifications(constant_name, namespace_path: namespace_path)
-      qualifications.any? { |name| @local_definitions.key?(name) }
+      Qualifications
+        .for(constant_name, namespace_path: namespace_path)
+        .any? { |name| @local_definitions.key?(name) }
     end
 
     private
@@ -38,29 +39,6 @@ module ConstantResolver
       fully_qualified_constant = [""].concat(current_namespace_path).push(constant_name).join("::")
 
       @local_definitions[fully_qualified_constant] = location
-    end
-
-    private
-
-    # What fully qualified constants can this constant refer to in this context?
-    #
-    # For example, `Foo` in the namespace `A::B` could be any of:
-    #   - `A::B::Foo`,
-    #   - `A::Foo`, or
-    #   - `::Foo`.
-    #
-    # If a fully qualified name is already given, like `::Foo::Bar`, just that
-    # name will be return.
-    def reference_qualifications(constant_name, namespace_path:)
-      return [constant_name] if constant_name.start_with?("::")
-
-      fully_qualified_constant_name = "::#{constant_name}"
-
-      possible_namespaces = namespace_path.reduce([""]) do |acc, current|
-        acc << acc.last + "::" + current
-      end
-
-      possible_namespaces.map { |namespace| namespace + fully_qualified_constant_name }
     end
   end
 end
