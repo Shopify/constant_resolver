@@ -91,7 +91,7 @@ module ConstantResolver
     end
 
     def glob_path(path)
-      @root_path + path + "**/*.rb"
+      File.join(@root_path, path, "**/*.rb")
     end
 
     def resolve_constant(const_name, namespace_path, original_name: const_name)
