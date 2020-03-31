@@ -83,13 +83,6 @@ module ConstantResolver
 
     private
 
-    def config
-      {
-        root_path: @root_path,
-        load_paths: @load_paths,
-      }
-    end
-
     def ambiguous_constant_message(const_name, paths)
       <<~MSG.chomp
         "#{const_name}" could refer to any of
