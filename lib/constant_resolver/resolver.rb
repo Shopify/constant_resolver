@@ -33,14 +33,11 @@ module ConstantResolver
     # @return [ConstantResolver::ConstantContext]
     def resolve(const_name, current_namespace_path: [])
       current_namespace_path = [] if const_name.start_with?("::")
-      inferred_name, location = resolve_constant(const_name.sub(/^::/, ""), current_namespace_path)
 
+      inferred_name, location = resolve_constant(const_name.sub(/^::/, ""), current_namespace_path)
       return unless inferred_name
 
-      ConstantContext.new(
-        inferred_name,
-        location,
-      )
+      ConstantContext.new(inferred_name, location)
     end
 
     # Maps constant names to file paths.
@@ -84,15 +81,14 @@ module ConstantResolver
       @file_map
     end
 
-    # @api private
+    private
+
     def config
       {
         root_path: @root_path,
         load_paths: @load_paths,
       }
     end
-
-    private
 
     def ambiguous_constant_message(const_name, paths)
       <<~MSG.chomp
