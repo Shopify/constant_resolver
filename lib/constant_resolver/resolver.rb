@@ -28,13 +28,13 @@ module ConstantResolver
     # If the name is partially qualified, we need the current namespace path to correctly infer its full name
     #
     # @param const_name [String] The constant's name, fully or partially qualified.
-    # @param current_namespace_path [Array<String>] (optional) The namespace of the context in which the constant is
+    # @param namespace_path [Array<String>] (optional) The namespace of the context in which the constant is
     #   used, e.g. ["Apps", "Models"] for `Apps::Models`. Defaults to [] which means top level.
     # @return [ConstantResolver::ConstantContext]
-    def resolve(const_name, current_namespace_path: [])
-      current_namespace_path = [] if const_name.start_with?("::")
+    def resolve(const_name, namespace_path: [])
+      namespace_path = [] if const_name.start_with?("::")
 
-      inferred_name, location = resolve_constant(const_name.sub(/^::/, ""), current_namespace_path)
+      inferred_name, location = resolve_constant(const_name.sub(/^::/, ""), namespace_path)
       return unless inferred_name
 
       ConstantContext.new(inferred_name, location)
@@ -101,8 +101,8 @@ module ConstantResolver
       @root_path + path + "**/*.rb"
     end
 
-    def resolve_constant(const_name, current_namespace_path, original_name: const_name)
-      namespace, location = resolve_traversing_namespace_path(const_name, current_namespace_path)
+    def resolve_constant(const_name, namespace_path, original_name: const_name)
+      namespace, location = resolve_traversing_namespace_path(const_name, namespace_path)
       if location
         ["::" + namespace.push(original_name).join("::"), location]
       elsif !const_name.include?("::")
@@ -110,18 +110,18 @@ module ConstantResolver
         [nil, nil]
       else
         parent_constant = const_name.split("::")[0..-2].join("::")
-        resolve_constant(parent_constant, current_namespace_path, original_name: original_name)
+        resolve_constant(parent_constant, namespace_path, original_name: original_name)
       end
     end
 
-    def resolve_traversing_namespace_path(const_name, current_namespace_path)
-      fully_qualified_name_guess = (current_namespace_path + [const_name]).join("::")
+    def resolve_traversing_namespace_path(const_name, namespace_path)
+      fully_qualified_name_guess = (namespace_path + [const_name]).join("::")
 
       location = file_map[fully_qualified_name_guess]
       if location || fully_qualified_name_guess == const_name
-        [current_namespace_path, location]
+        [namespace_path, location]
       else
-        resolve_traversing_namespace_path(const_name, current_namespace_path[0..-2])
+        resolve_traversing_namespace_path(const_name, namespace_path[0..-2])
       end
     end
   end
