@@ -107,11 +107,21 @@ module ConstantResolver
       end
     end
 
+    # Attempt to resolve the given constant in the given namespace against known files
+    # in our autoload paths.
+    #
+    # For example, if we have `const_name = Foo` and namespace path consists of `Spam` and `Eggs`,
+    # we'll attempt to look for the following files, in the following order:
+    #
+    # - spam/eggs/foo.rb
+    # - spam/foo.rb
+    # - foo.rb
+    #
     def resolve_traversing_namespace_path(const_name, namespace_path)
       fully_qualified_name_guess = (namespace_path + [const_name]).join("::")
 
       location = file_map[fully_qualified_name_guess]
-      if location || fully_qualified_name_guess == const_name
+      if location || namespace_path.empty?
         [namespace_path, location]
       else
         resolve_traversing_namespace_path(const_name, namespace_path[0..-2])
