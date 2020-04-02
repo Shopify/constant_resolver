@@ -15,6 +15,7 @@ module ConstantResolver
   class ConstantContext < Struct.new(:name, :location); end
 end
 
+require "constant_resolver/autoloader"
 require "constant_resolver/default_inflector"
 require "constant_resolver/constant_definitions"
 require "constant_resolver/parsers"

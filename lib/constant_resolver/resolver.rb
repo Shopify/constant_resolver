@@ -2,26 +2,23 @@
 
 module ConstantResolver
   class Resolver
-    # @param root_path [String] The root path of the application to analyze
-    # @param load_paths [Array<String>] The autoload paths of the application.
-    # @param inflector [Object] Any object that implements a `camelize` function.
+    # Resolver resolves a constant, autoloading when necessary.
+    #
+    # @param autoloader [ConstantResolver::Autoloader]
+    #   The autoloader used for resolving constants that have yet to have been defined
     #
     # @example usage in a Rails app
     #   config = Rails.application.config
     #   load_paths = (config.eager_load_paths + config.autoload_paths + config.autoload_once_paths)
     #     .map { |p| Pathname.new(p).relative_path_from(Rails.root).to_s }
-    #   ConstantResolver.new(
+    #   autoloader = ConstantResolver::Autoloader.new(
     #     root_path: Rails.root.to_s,
     #     load_paths: load_paths
     #   )
-    def initialize(root_path:, load_paths:, inflector: DefaultInflector.new)
-      root_path += "/" unless root_path.end_with?("/")
-      load_paths = load_paths.map { |p| p.end_with?("/") ? p : p + "/" }.uniq
-
-      @root_path = root_path
-      @load_paths = load_paths
-      @file_map = nil
-      @inflector = inflector
+    #   resolver = ConstantResolver::Resolver.new(autoloader)
+    def initialize(autoloader)
+      @autoloader = autoloader
+      @defined_constants = {}
     end
 
     # Resolve a constant via its name.
@@ -40,59 +37,9 @@ module ConstantResolver
       ConstantContext.new(inferred_name, location)
     end
 
-    # Maps constant names to file paths.
-    #
-    # @return [Hash<String, String>]
-    def file_map
-      return @file_map if @file_map
-      @file_map = {}
-      duplicate_files = {}
-
-      @load_paths.each do |load_path|
-        Dir[glob_path(load_path)].each do |file_path|
-          root_relative_path = file_path.delete_prefix!(@root_path)
-          const_name = @inflector.camelize(root_relative_path.delete_prefix(load_path).delete_suffix!(".rb"))
-          existing_entry = @file_map[const_name]
-
-          if existing_entry
-            duplicate_files[const_name] ||= [existing_entry]
-            duplicate_files[const_name] << root_relative_path
-          end
-          @file_map[const_name] = root_relative_path
-        end
-      end
-
-      if duplicate_files.any?
-        raise(Error, <<~MSG)
-          Ambiguous constant definition:
-
-          #{duplicate_files.map { |const_name, paths| ambiguous_constant_message(const_name, paths) }.join("\n")}
-        MSG
-      end
-
-      if @file_map.empty?
-        raise(Error, <<~MSG)
-          Could not find any ruby files. Searched in:
-
-          - #{@load_paths.map { |load_path| glob_path(load_path) }.join("\n- ")}
-        MSG
-      end
-
-      @file_map
-    end
-
     private
 
-    def ambiguous_constant_message(const_name, paths)
-      <<~MSG.chomp
-        "#{const_name}" could refer to any of
-          #{paths.join("\n  ")}
-      MSG
-    end
-
-    def glob_path(path)
-      File.join(@root_path, path, "**/*.rb")
-    end
+    attr_reader :defined_constants
 
     def resolve_constant(const_name, namespace_path, original_name: const_name)
       namespace, location = resolve_traversing_namespace_path(const_name, namespace_path)
@@ -118,10 +65,14 @@ module ConstantResolver
     # - foo.rb
     #
     def resolve_traversing_namespace_path(const_name, namespace_path)
-      fully_qualified_name_guess = (namespace_path + [const_name]).join("::")
+      fully_qualified_name_guess = ["", *namespace_path, const_name].join("::")
 
-      location = file_map[fully_qualified_name_guess]
+      location = defined_constants[fully_qualified_name_guess]
+      return [namespace_path, location] if location
+
+      location = @autoloader.path_for(fully_qualified_name_guess)
       if location || namespace_path.empty?
+        defined_constants[fully_qualified_name_guess] = location
         [namespace_path, location]
       else
         resolve_traversing_namespace_path(const_name, namespace_path[0..-2])

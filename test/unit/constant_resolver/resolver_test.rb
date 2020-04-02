@@ -4,155 +4,72 @@ require "test_helper"
 
 module ConstantResolver
   class ResolverTest < Minitest::Test
-    DEFAULT_ROOT_PATH = "test/fixtures/constant_discovery/valid/"
-
-    class OverrideInflector < DefaultInflector
-      def initialize(overrides)
-        @overrides = overrides
+    class AutoloaderStub
+      def initialize(path_map = {})
+        @path_map = path_map
       end
 
-      def camelize(string)
-        string = string.dup
-        @overrides.each do |before, after|
-          string.gsub!(/\b#{before}\b/, after)
-        end
-        super(string)
+      def path_for(fully_qualified_constant)
+        @path_map[fully_qualified_constant]
       end
     end
 
-    def test_discovers_simple_constant
-      constant = resolver.resolve("Order")
-      assert_equal("::Order", constant.name)
-      assert_equal("app/models/order.rb", constant.location)
+    def test_can_resolve_fully_qualified_constant_if_found
+      autoloader = AutoloaderStub.new("::Foo::Bar" => "foo/bar.rb")
+      resolver = Resolver.new(autoloader)
+
+      constant_context = resolver.resolve("::Foo::Bar")
+
+      assert_equal("::Foo::Bar", constant_context.name)
+      assert_equal("foo/bar.rb", constant_context.location)
     end
 
-    def test_resolve_returns_constant_context
-      context = resolver.resolve("Order")
-      assert_instance_of(ConstantResolver::ConstantContext, context)
+    def test_can_resolve_relative_constant_if_found
+      autoloader = AutoloaderStub.new("::Foo::Bar" => "foo/bar.rb")
+      resolver = Resolver.new(autoloader)
+
+      constant_context = resolver.resolve("Bar", namespace_path: ["Foo"])
+
+      assert_equal("::Foo::Bar", constant_context.name)
+      assert_equal("foo/bar.rb", constant_context.location)
     end
 
-    def test_does_not_discover_constant_with_invalid_casing
-      constant = resolver.resolve("ORDER")
+    def test_can_resolve_fully_qualified_constant_with_namespace_path_if_found
+      autoloader = AutoloaderStub.new("::Foo::Bar" => "foo/bar.rb")
+      resolver = Resolver.new(autoloader)
 
-      assert_nil(constant)
+      constant_context = resolver.resolve("::Foo::Bar", namespace_path: ["Foo"])
+
+      assert_equal("::Foo::Bar", constant_context.name)
+      assert_equal("foo/bar.rb", constant_context.location)
     end
 
-    def test_understands_nested_load_paths
-      constant = resolver.resolve("Entry")
+    def test_can_resolve_constant_in_grandparent_namespace
+      autoloader = AutoloaderStub.new("::Foo::Bar::Spam" => "foo.rb")
+      resolver = Resolver.new(autoloader)
 
-      assert_equal("::Entry", constant.name)
-      assert_equal("app/models/entry.rb", constant.location)
+      constant_context = resolver.resolve("Spam", namespace_path: ["Foo", "Bar"])
 
-      constant = resolver.resolve("HasTimeline")
-
-      assert_equal("::HasTimeline", constant.name)
-      assert_equal("app/models/concerns/has_timeline.rb", constant.location)
+      assert_equal("::Foo::Bar::Spam", constant_context.name)
+      assert_equal("foo.rb", constant_context.location)
     end
 
-    def test_does_not_try_to_discover_constant_outside_of_load_paths
-      assert(File.file?(File.join(DEFAULT_ROOT_PATH, "initializers/app_extensions.rb")))
+    def test_only_autoloads_once
+      autoloader = mock
+      autoloader.expects(:path_for).with("::Foo::Bar::Spam").returns("foo.rb").once
+      resolver = Resolver.new(autoloader)
 
-      constant = resolver.resolve("AppExtensions")
-
-      assert_nil(constant)
+      resolver.resolve("Spam", namespace_path: ["Foo", "Bar"])
+      resolver.resolve("Spam", namespace_path: ["Foo", "Bar"])
     end
 
-    def test_discovers_constants_that_dont_have_their_own_file_using_their_parent_namespace
-      constant = resolver.resolve("Sales::Errors::SomethingWentWrong")
+    def test_returns_nil_when_cannot_resolve_constant_to_path
+      autoloader = AutoloaderStub.new
+      resolver = Resolver.new(autoloader)
 
-      assert_equal("::Sales::Errors::SomethingWentWrong", constant.name)
-      assert_equal("app/public/sales/errors.rb", constant.location)
-    end
+      constant_context = resolver.resolve("::Foo::Bar", namespace_path: ["Foo"])
 
-    def test_discovers_constants_using_custom_inflector
-      constant = resolver.resolve("GraphQL::QueryRoot")
-
-      assert_equal("::GraphQL::QueryRoot", constant.name)
-      assert_equal("app/models/graphql/query_root.rb", constant.location)
-    end
-
-    def test_discovers_constants_that_are_partially_qualified_inferring_their_full_qualification_from_parent_namespace
-      constant = resolver.resolve("Errors", namespace_path: ["Sales", "SomeEntrypoint"])
-
-      assert_equal("::Sales::Errors", constant.name)
-      assert_equal("app/public/sales/errors.rb", constant.location)
-    end
-
-    def test_discovers_constants_that_are_both_partially_qualified_and_dont_have_their_own_file
-      constant = resolver.resolve("Errors::SomethingWentWrong", namespace_path: ["Sales", "SomeEntrypoint"])
-
-      assert_equal("::Sales::Errors::SomethingWentWrong", constant.name)
-      assert_equal("app/public/sales/errors.rb", constant.location)
-    end
-
-    def test_discovers_constants_that_are_explicitly_toplevel
-      constant = resolver.resolve("::Order")
-
-      assert_equal("::Order", constant.name)
-      assert_equal("app/models/order.rb", constant.location)
-    end
-
-    def test_respects_colon_colon_prefix_by_resolving_as_top_level_constant
-      constant = resolver.resolve("Entry", namespace_path: ["Sales", "SomeEntrypoint"])
-
-      assert_equal("::Sales::Entry", constant.name)
-      assert_equal("app/models/sales/entry.rb", constant.location)
-
-      constant = resolver.resolve("::Entry", namespace_path: ["Sales", "SomeEntrypoint"])
-
-      assert_equal("::Entry", constant.name)
-      assert_equal("app/models/entry.rb", constant.location)
-    end
-
-    def test_raises_if_ambiguous_file_path_structure
-      resolver = resolver(root_path: "test/fixtures/constant_discovery/invalid/")
-
-      begin
-        e = assert_raises(ConstantResolver::Error) do
-          resolver.resolve("AnythingReally")
-        end
-
-        assert_equal(<<~MSG, e.message)
-          Ambiguous constant definition:
-
-          "Order" could refer to any of
-            app/models/order.rb
-            app/services/order.rb
-        MSG
-      end
-    end
-
-    def test_raises_if_no_files
-      resolver = resolver(root_path: "test/fixtures/constant_discovery/empty/")
-
-      begin
-        e = assert_raises(ConstantResolver::Error) do
-          resolver.resolve("AnythingReally")
-        end
-
-        assert_equal(<<~MSG, e.message)
-          Could not find any ruby files. Searched in:
-
-          - test/fixtures/constant_discovery/empty/app/public/**/*.rb
-          - test/fixtures/constant_discovery/empty/app/models/**/*.rb
-          - test/fixtures/constant_discovery/empty/app/models/concerns/**/*.rb
-          - test/fixtures/constant_discovery/empty/app/services/**/*.rb
-        MSG
-      end
-    end
-
-    def resolver(root_path: DEFAULT_ROOT_PATH)
-      @root_path = root_path
-      @resolver = ConstantResolver::Resolver.new(
-        root_path: @root_path,
-        load_paths: [
-          "app/public",
-          "app/models",
-          "app/models/concerns",
-          "app/services",
-        ],
-        inflector: OverrideInflector.new("graphql" => "GraphQL")
-      )
+      assert_nil(constant_context)
     end
   end
 end
