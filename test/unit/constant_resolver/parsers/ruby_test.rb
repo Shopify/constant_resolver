@@ -13,7 +13,7 @@ module ConstantResolver
         File
           .expects(:read)
           .with("test_file.rb")
-          .returns( "class Foo; end")
+          .returns("class Foo; end")
 
         result = @parser.parse_file("test_file.rb")
 

@@ -43,13 +43,13 @@ module ConstantResolver
       assert_nil(constant)
     end
 
-    # TODO reenable this test once we properly support local constant definitions
-    #def test_discovers_constants_that_dont_have_their_own_file_using_their_parent_namespace
+    # TODO: reenable this test once we properly support local constant definitions
+    # def test_discovers_constants_that_dont_have_their_own_file_using_their_parent_namespace
     #  constant = resolver.resolve("Sales::Errors::SomethingWentWrong")
 
     #  assert_equal("::Sales::Errors::SomethingWentWrong", constant.name)
     #  assert_equal("app/public/sales/errors.rb", constant.location)
-    #end
+    # end
 
     def test_discovers_constants_using_custom_inflector
       constant = resolver.resolve("GraphQL::QueryRoot")
@@ -65,13 +65,13 @@ module ConstantResolver
       assert_equal("app/public/sales/errors.rb", constant.location)
     end
 
-    # TODO reenable this test once we properly support local constant definitions
-    #def test_discovers_constants_that_are_both_partially_qualified_and_dont_have_their_own_file
+    # TODO: reenable this test once we properly support local constant definitions
+    # def test_discovers_constants_that_are_both_partially_qualified_and_dont_have_their_own_file
     #  constant = resolver.resolve("Errors::SomethingWentWrong", namespace_path: ["Sales", "SomeEntrypoint"])
 
     #  assert_equal("::Sales::Errors::SomethingWentWrong", constant.name)
     #  assert_equal("app/public/sales/errors.rb", constant.location)
-    #end
+    # end
 
     def test_discovers_constants_that_are_explicitly_toplevel
       constant = resolver.resolve("::Order")

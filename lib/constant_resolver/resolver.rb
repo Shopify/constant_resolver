@@ -31,7 +31,7 @@ module ConstantResolver
     def resolve(const_name, namespace_path: [])
       constant_pieces = const_name.split("::")
       if const_name.start_with?("::")
-        namespace_path = [] 
+        namespace_path = []
         constant_pieces = constant_pieces[1..]
       end
 
@@ -55,11 +55,11 @@ module ConstantResolver
       namespace_path << const_name
 
       # All other pieces will be fixed to the namespace found via traversal.
-      constant_pieces.each do |const_name|
-        _, location = resolve_constant(const_name, namespace_path)
+      constant_pieces.each do |const_piece|
+        _, location = resolve_constant(const_piece, namespace_path)
         return nil unless location
 
-        namespace_path << const_name
+        namespace_path << const_piece
       end
 
       fully_qualified_name = ["", *namespace_path].join("::")
@@ -80,8 +80,6 @@ module ConstantResolver
       if location
         defined_constants[fully_qualified_name_guess] = location
         [namespace_path, location]
-      else
-        nil
       end
     end
 
