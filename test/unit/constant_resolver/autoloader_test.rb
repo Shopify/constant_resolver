@@ -29,8 +29,8 @@ module ConstantResolver
         Ambiguous constant definition:
 
         "::Order" could refer to any of
-          app/models/order.rb
           app/services/order.rb
+          app/models/order.rb
       MSG
     end
 

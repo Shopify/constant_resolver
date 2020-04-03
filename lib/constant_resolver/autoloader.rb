@@ -2,6 +2,8 @@
 
 module ConstantResolver
   class Autoloader
+    AUTOVIVIFIED = "autovivified"
+
     # @param root_path [String] The root path of the application to analyze
     # @param load_paths [Array<String>] The autoload paths of the application.
     # @param inflector [Object] Any object that implements a `camelize` function.
@@ -30,23 +32,37 @@ module ConstantResolver
     # @return [Hash<String, String>]
     def build_file_map
       file_map = {}
+      scanned_paths = Set.new
       duplicate_files = {}
 
-      @load_paths.each do |load_path|
+      # We sort by descending length to ensure load paths that are subdirectories come first. For
+      # example, it's not uncommon to have `app/models` and `app/models/concerns`
+      @load_paths.sort_by { |v| -v.length }.each do |load_path|
         Dir[glob_path(load_path)].each do |file_path|
+          next if scanned_paths.include?(file_path)
+          scanned_paths << file_path
+
           root_relative_path = file_path.delete_prefix!(@root_path)
 
           const_name = @inflector
             .camelize(root_relative_path.delete_prefix(load_path).delete_suffix!(".rb"))
-            .prepend("::")
 
+          # Everything but the last piece we're going to assume are modules and autovivify
+          constant_pieces = const_name.split("::")
+          constant_pieces[0..-2].reduce("") do |fully_qualified_name, name|
+            module_name = "#{fully_qualified_name}::#{name}"
+            file_map[module_name] = AUTOVIVIFIED
+            module_name
+          end
+
+          const_name = const_name.prepend("::")
           existing_entry = file_map[const_name]
-          if existing_entry
+          if existing_entry == AUTOVIVIFIED || existing_entry.nil?
+            file_map[const_name] = root_relative_path
+          elsif existing_entry
             duplicate_files[const_name] ||= [existing_entry]
             duplicate_files[const_name] << root_relative_path
           end
-
-          file_map[const_name] = root_relative_path
         end
       end
 

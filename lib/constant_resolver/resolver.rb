@@ -29,9 +29,13 @@ module ConstantResolver
     #   used, e.g. ["Apps", "Models"] for `Apps::Models`. Defaults to [] which means top level.
     # @return [ConstantResolver::ConstantContext]
     def resolve(const_name, namespace_path: [])
-      namespace_path = [] if const_name.start_with?("::")
+      constant_pieces = const_name.split("::")
+      if const_name.start_with?("::")
+        namespace_path = [] 
+        constant_pieces = constant_pieces[1..]
+      end
 
-      inferred_name, location = resolve_constant(const_name.sub(/^::/, ""), namespace_path)
+      inferred_name, location = resolve_constant_pieces(constant_pieces, namespace_path)
       return unless inferred_name
 
       ConstantContext.new(inferred_name, location)
@@ -41,21 +45,48 @@ module ConstantResolver
 
     attr_reader :defined_constants
 
-    def resolve_constant(const_name, namespace_path, original_name: const_name)
-      namespace, location = resolve_traversing_namespace_path(const_name, namespace_path)
+    def resolve_constant_pieces(constant_pieces, namespace_path)
+      # The first piece can traverse the namespace.
+      const_name = constant_pieces.shift
+      namespace_path, location = resolve_traversing_namespace_path(const_name, namespace_path)
+
+      return nil unless location
+
+      namespace_path << const_name
+
+      # All other pieces will be fixed to the namespace found via traversal.
+      constant_pieces.each do |const_name|
+        _, location = resolve_constant(const_name, namespace_path)
+        return nil unless location
+
+        namespace_path << const_name
+      end
+
+      fully_qualified_name = ["", *namespace_path].join("::")
+      [fully_qualified_name, location]
+    end
+
+    # Attempt to resolve the given constant in the given namespace.
+    #
+    # For example, if we have `const_name = Foo` and namespace path consists of `Spam` and `Eggs`,
+    # we'll attempt to look for `spam/eggs/foo.rb`.
+    def resolve_constant(const_name, namespace_path)
+      fully_qualified_name_guess = ["", *namespace_path, const_name].join("::")
+
+      location = defined_constants[fully_qualified_name_guess]
+      return [namespace_path, location] if location
+
+      location = @autoloader.path_for(fully_qualified_name_guess)
       if location
-        ["::" + namespace.push(original_name).join("::"), location]
-      elsif !const_name.include?("::")
-        # constant could not be resolved to a file in the given load paths
-        [nil, nil]
+        defined_constants[fully_qualified_name_guess] = location
+        [namespace_path, location]
       else
-        parent_constant = const_name.split("::")[0..-2].join("::")
-        resolve_constant(parent_constant, namespace_path, original_name: original_name)
+        nil
       end
     end
 
-    # Attempt to resolve the given constant in the given namespace against known files
-    # in our autoload paths.
+    # Attempt to resolve the given constant in the given namespace, traversing upwards
+    # through the namespace until the constant is found or the namespace is exhausted.
     #
     # For example, if we have `const_name = Foo` and namespace path consists of `Spam` and `Eggs`,
     # we'll attempt to look for the following files, in the following order:
@@ -63,20 +94,11 @@ module ConstantResolver
     # - spam/eggs/foo.rb
     # - spam/foo.rb
     # - foo.rb
-    #
     def resolve_traversing_namespace_path(const_name, namespace_path)
-      fully_qualified_name_guess = ["", *namespace_path, const_name].join("::")
+      ret = resolve_constant(const_name, namespace_path)
+      return ret if ret || namespace_path.empty?
 
-      location = defined_constants[fully_qualified_name_guess]
-      return [namespace_path, location] if location
-
-      location = @autoloader.path_for(fully_qualified_name_guess)
-      if location || namespace_path.empty?
-        defined_constants[fully_qualified_name_guess] = location
-        [namespace_path, location]
-      else
-        resolve_traversing_namespace_path(const_name, namespace_path[0..-2])
-      end
+      resolve_traversing_namespace_path(const_name, namespace_path[0..-2])
     end
   end
 end

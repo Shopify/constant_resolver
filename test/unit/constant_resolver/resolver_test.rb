@@ -15,7 +15,10 @@ module ConstantResolver
     end
 
     def test_can_resolve_fully_qualified_constant_if_found
-      autoloader = AutoloaderStub.new("::Foo::Bar" => "foo/bar.rb")
+      autoloader = AutoloaderStub.new(
+        "::Foo" => "autovivified",
+        "::Foo::Bar" => "foo/bar.rb",
+      )
       resolver = Resolver.new(autoloader)
 
       constant_context = resolver.resolve("::Foo::Bar")
@@ -24,18 +27,11 @@ module ConstantResolver
       assert_equal("foo/bar.rb", constant_context.location)
     end
 
-    def test_can_resolve_relative_constant_if_found
-      autoloader = AutoloaderStub.new("::Foo::Bar" => "foo/bar.rb")
-      resolver = Resolver.new(autoloader)
-
-      constant_context = resolver.resolve("Bar", namespace_path: ["Foo"])
-
-      assert_equal("::Foo::Bar", constant_context.name)
-      assert_equal("foo/bar.rb", constant_context.location)
-    end
-
     def test_can_resolve_fully_qualified_constant_with_namespace_path_if_found
-      autoloader = AutoloaderStub.new("::Foo::Bar" => "foo/bar.rb")
+      autoloader = AutoloaderStub.new(
+        "::Foo" => "autovivified",
+        "::Foo::Bar" => "foo/bar.rb",
+      )
       resolver = Resolver.new(autoloader)
 
       constant_context = resolver.resolve("::Foo::Bar", namespace_path: ["Foo"])
@@ -44,14 +40,46 @@ module ConstantResolver
       assert_equal("foo/bar.rb", constant_context.location)
     end
 
+    def test_can_resolve_relative_constant_if_found
+      autoloader = AutoloaderStub.new(
+        "::Foo" => "autovivified",
+        "::Foo::Bar" => "foo/bar.rb",
+      )
+      resolver = Resolver.new(autoloader)
+
+      constant_context = resolver.resolve("Bar", namespace_path: ["Foo"])
+
+      assert_equal("::Foo::Bar", constant_context.name)
+      assert_equal("foo/bar.rb", constant_context.location)
+    end
+
     def test_can_resolve_constant_in_grandparent_namespace
-      autoloader = AutoloaderStub.new("::Foo::Bar::Spam" => "foo.rb")
+      autoloader = AutoloaderStub.new(
+        "::Foo" => "foo.rb",
+        "::Foo::Bar" => "foo.rb",
+        "::Foo::Bar::Spam" => "foo.rb",
+      )
       resolver = Resolver.new(autoloader)
 
       constant_context = resolver.resolve("Spam", namespace_path: ["Foo", "Bar"])
 
       assert_equal("::Foo::Bar::Spam", constant_context.name)
       assert_equal("foo.rb", constant_context.location)
+    end
+
+    def test_does_not_resolve_compact_constant_even_if_it_exists_at_a_higher_level
+      autoloader = AutoloaderStub.new(
+        "::Bar" => "bar.rb",
+        "::Bar::Spam" => "bar/spam.rb",
+        "::NotBar" => "autovivified",
+        "::NotBar::Bar" => "not_bar/bar.rb",
+        "::NotBar::Bar::Eggs" => "not_bar/bar/eggs.rb",
+      )
+      resolver = Resolver.new(autoloader)
+
+      constant_context = resolver.resolve("Bar::Spam", namespace_path: ["NotBar"])
+
+      assert_nil(constant_context)
     end
 
     def test_only_autoloads_once
