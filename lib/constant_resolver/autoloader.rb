@@ -7,13 +7,13 @@ module ConstantResolver
     # @param root_path [String] The root path of the application to analyze
     # @param load_paths [Array<String>] The autoload paths of the application.
     # @param inflector [Object] Any object that implements a `camelize` function.
-    def initialize(root_path:, load_paths:, inflector: DefaultInflector.new)
+    def initialize(root_path:, load_paths:, inflector: nil)
       root_path += "/" unless root_path.end_with?("/")
       load_paths = load_paths.map { |p| p.end_with?("/") ? p : p + "/" }.uniq
 
       @root_path = root_path
       @load_paths = load_paths
-      @inflector = inflector
+      @inflector = inflector || DefaultInflector.new
       @file_map = build_file_map
     end
 

@@ -13,6 +13,18 @@
 module ConstantResolver
   class Error < StandardError; end
   class ConstantContext < Struct.new(:name, :location); end
+
+  class << self
+    def for(root_path:, load_paths:, inflector: nil)
+      autoloader = Autoloader.new(
+        root_path: root_path,
+        load_paths: load_paths,
+        inflector: inflector
+      )
+
+      Resolver.new(autoloader)
+    end
+  end
 end
 
 require "constant_resolver/autoloader"
