@@ -2,8 +2,6 @@
 
 module ConstantResolver
   class Autoloader
-    AUTOVIVIFIED = "autovivified"
-
     # @param root_path [String] The root path of the application to analyze
     # @param load_paths [Array<String>] The autoload paths of the application.
     # @param inflector [Object] Any object that implements a `camelize` function.
@@ -44,24 +42,25 @@ module ConstantResolver
 
           root_relative_path = file_path.delete_prefix!(@root_path)
 
-          const_name = @inflector
-            .camelize(root_relative_path.delete_prefix(load_path).delete_suffix!(".rb"))
+          const_path = root_relative_path.delete_prefix(load_path).delete_suffix!(".rb")
+          const_name = @inflector.camelize(const_path).prepend("::")
 
-          # Everything but the last piece we're going to assume are modules and autovivify
-          constant_pieces = const_name.split("::")
-          constant_pieces[0..-2].reduce("") do |fully_qualified_name, name|
-            module_name = "#{fully_qualified_name}::#{name}"
-            file_map[module_name] = AUTOVIVIFIED
-            module_name
-          end
-
-          const_name = const_name.prepend("::")
           existing_entry = file_map[const_name]
-          if existing_entry == AUTOVIVIFIED || existing_entry.nil?
+          if existing_entry.nil? || autovivified?(existing_entry)
             file_map[const_name] = root_relative_path
           elsif existing_entry
             duplicate_files[const_name] ||= [existing_entry]
             duplicate_files[const_name] << root_relative_path
+          end
+
+          # Autovivify any parts othe constant's namespace that haven't already been autoloaded or
+          # already autovivified
+          until const_path == "."
+            const_path = File.dirname(const_path)
+            const_name = @inflector.camelize(const_path).prepend("::")
+            break if file_map.key?(const_name)
+
+            file_map[const_name] = File.join(load_path, const_path)
           end
         end
       end
@@ -83,6 +82,10 @@ module ConstantResolver
       end
 
       file_map
+    end
+
+    def autovivified?(name)
+      !name.end_with?(".rb")
     end
 
     def ambiguous_constant_message(const_name, paths)

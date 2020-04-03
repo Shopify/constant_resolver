@@ -20,6 +20,22 @@ module ConstantResolver
       assert_nil(path)
     end
 
+    def test_autovivifies_modules_without_a_file
+      autoloader = new_autoloader(root_path: "test/fixtures/constant_discovery/valid")
+
+      path = autoloader.path_for("::GraphQL")
+
+      assert_equal("app/models/graphql", path)
+    end
+
+    def test_actual_namespace_file_overrides_autovivification
+      autoloader = new_autoloader(root_path: "test/fixtures/constant_discovery/valid")
+
+      path = autoloader.path_for("::Sales")
+
+      assert_equal("app/models/sales.rb", path)
+    end
+
     def test_raises_if_ambiguous_file_path_structure
       e = assert_raises(ConstantResolver::Error) do
         new_autoloader(root_path: "test/fixtures/constant_discovery/invalid")
@@ -51,6 +67,22 @@ module ConstantResolver
 
     private
 
+    class OverrideInflector < DefaultInflector
+      def initialize(overrides)
+        @overrides = overrides
+      end
+
+      def camelize(string)
+        string = string.dup
+        @overrides.each do |before, after|
+          string.gsub!(/\b#{before}\b/, after)
+        end
+        super(string)
+      end
+    end
+
+    private_constant :OverrideInflector
+
     def new_autoloader(root_path:)
       Autoloader.new(
         root_path: root_path,
@@ -60,6 +92,7 @@ module ConstantResolver
           "app/models/concerns",
           "app/services",
         ],
+        inflector: OverrideInflector.new("graphql" => "GraphQL")
       )
     end
   end
