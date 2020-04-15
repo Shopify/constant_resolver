@@ -4,6 +4,8 @@ require "test_helper"
 
 module ConstantResolver
   class ResolverTest < Minitest::Test
+    AUTOVIVIFIED = "autovivified"
+
     class AutoloaderStub
       def initialize(path_map = {})
         @path_map = path_map
@@ -12,14 +14,22 @@ module ConstantResolver
       def path_for(fully_qualified_constant)
         @path_map[fully_qualified_constant]
       end
+
+      def autovivified?(fully_qualified_constant)
+        @path_map[fully_qualified_constant] == AUTOVIVIFIED
+      end
+    end
+
+    def setup
+      @stub_constant_definitions = stub(each_definition_for: nil)
     end
 
     def test_can_resolve_fully_qualified_constant_if_found
       autoloader = AutoloaderStub.new(
-        "::Foo" => "autovivified",
+        "::Foo" => AUTOVIVIFIED,
         "::Foo::Bar" => "foo/bar.rb",
       )
-      resolver = Resolver.new(autoloader)
+      resolver = Resolver.new(autoloader, constant_definitions: @stub_constant_definitions)
 
       constant_context = resolver.resolve("::Foo::Bar")
 
@@ -29,10 +39,10 @@ module ConstantResolver
 
     def test_can_resolve_fully_qualified_constant_with_namespace_path_if_found
       autoloader = AutoloaderStub.new(
-        "::Foo" => "autovivified",
+        "::Foo" => AUTOVIVIFIED,
         "::Foo::Bar" => "foo/bar.rb",
       )
-      resolver = Resolver.new(autoloader)
+      resolver = Resolver.new(autoloader, constant_definitions: @stub_constant_definitions)
 
       constant_context = resolver.resolve("::Foo::Bar", namespace_path: ["Foo"])
 
@@ -42,10 +52,10 @@ module ConstantResolver
 
     def test_can_resolve_relative_constant_if_found
       autoloader = AutoloaderStub.new(
-        "::Foo" => "autovivified",
+        "::Foo" => AUTOVIVIFIED,
         "::Foo::Bar" => "foo/bar.rb",
       )
-      resolver = Resolver.new(autoloader)
+      resolver = Resolver.new(autoloader, constant_definitions: @stub_constant_definitions)
 
       constant_context = resolver.resolve("Bar", namespace_path: ["Foo"])
 
@@ -59,7 +69,7 @@ module ConstantResolver
         "::Foo::Bar" => "foo.rb",
         "::Foo::Bar::Spam" => "foo.rb",
       )
-      resolver = Resolver.new(autoloader)
+      resolver = Resolver.new(autoloader, constant_definitions: @stub_constant_definitions)
 
       constant_context = resolver.resolve("Spam", namespace_path: ["Foo", "Bar"])
 
@@ -71,29 +81,20 @@ module ConstantResolver
       autoloader = AutoloaderStub.new(
         "::Bar" => "bar.rb",
         "::Bar::Spam" => "bar/spam.rb",
-        "::NotBar" => "autovivified",
+        "::NotBar" => AUTOVIVIFIED,
         "::NotBar::Bar" => "not_bar/bar.rb",
         "::NotBar::Bar::Eggs" => "not_bar/bar/eggs.rb",
       )
-      resolver = Resolver.new(autoloader)
+      resolver = Resolver.new(autoloader, constant_definitions: @stub_constant_definitions)
 
       constant_context = resolver.resolve("Bar::Spam", namespace_path: ["NotBar"])
 
       assert_nil(constant_context)
     end
 
-    def test_only_autoloads_once
-      autoloader = mock
-      autoloader.expects(:path_for).with("::Foo::Bar::Spam").returns("foo.rb").once
-      resolver = Resolver.new(autoloader)
-
-      resolver.resolve("Spam", namespace_path: ["Foo", "Bar"])
-      resolver.resolve("Spam", namespace_path: ["Foo", "Bar"])
-    end
-
     def test_returns_nil_when_cannot_resolve_constant_to_path
       autoloader = AutoloaderStub.new
-      resolver = Resolver.new(autoloader)
+      resolver = Resolver.new(autoloader, constant_definitions: @stub_constant_definitions)
 
       constant_context = resolver.resolve("::Foo::Bar", namespace_path: ["Foo"])
 

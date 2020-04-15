@@ -16,8 +16,9 @@ module ConstantResolver
     #     load_paths: load_paths
     #   )
     #   resolver = ConstantResolver::Resolver.new(autoloader)
-    def initialize(autoloader)
+    def initialize(autoloader, constant_definitions: ConstantDefinitions.new)
       @autoloader = autoloader
+      @constant_definitions = constant_definitions
       @defined_constants = {}
     end
 
@@ -35,10 +36,10 @@ module ConstantResolver
         constant_pieces = constant_pieces[1..]
       end
 
-      inferred_name, location = resolve_constant_pieces(constant_pieces, namespace_path)
-      return unless inferred_name
+      inferred_name, path = resolve_constant_pieces(constant_pieces, namespace_path)
+      return unless inferred_name && !@autoloader.autovivified?(path)
 
-      ConstantContext.new(inferred_name, location)
+      ConstantContext.new(inferred_name, path)
     end
 
     private
@@ -48,22 +49,22 @@ module ConstantResolver
     def resolve_constant_pieces(constant_pieces, namespace_path)
       # The first piece can traverse the namespace.
       const_name = constant_pieces.shift
-      namespace_path, location = resolve_traversing_namespace_path(const_name, namespace_path)
+      namespace_path, path = resolve_traversing_namespace_path(const_name, namespace_path)
 
-      return nil unless location
+      return nil unless path
 
       namespace_path << const_name
 
       # All other pieces will be fixed to the namespace found via traversal.
       constant_pieces.each do |const_piece|
-        _, location = resolve_constant(const_piece, namespace_path)
-        return nil unless location
+        _, path = resolve_constant(const_piece, namespace_path)
+        return nil unless path
 
         namespace_path << const_piece
       end
 
       fully_qualified_name = ["", *namespace_path].join("::")
-      [fully_qualified_name, location]
+      [fully_qualified_name, path]
     end
 
     # Attempt to resolve the given constant in the given namespace.
@@ -73,14 +74,27 @@ module ConstantResolver
     def resolve_constant(const_name, namespace_path)
       fully_qualified_name_guess = ["", *namespace_path, const_name].join("::")
 
-      location = defined_constants[fully_qualified_name_guess]
-      return [namespace_path, location] if location
+      path = defined_constants[fully_qualified_name_guess]
+      return [namespace_path, path] if path
 
-      location = @autoloader.path_for(fully_qualified_name_guess)
-      if location
-        defined_constants[fully_qualified_name_guess] = location
-        [namespace_path, location]
+      path = @autoloader.path_for(fully_qualified_name_guess)
+      return nil unless path
+
+      defined_constants[fully_qualified_name_guess] = path
+
+      @constant_definitions.each_definition_for(path) do |name|
+        next if name == fully_qualified_name_guess
+
+        # If there's an autoloadable definition, we're going to skip it. It needs to be parsed
+        # for local definitions, so we'll wait until it's explicitly asked to be resolved instead
+        # of recursively trying to parse all local definitions.
+        autoload_path = @autoloader.path_for(name)
+        next if autoload_path
+
+        defined_constants[name] = path
       end
+
+      [namespace_path, path]
     end
 
     # Attempt to resolve the given constant in the given namespace, traversing upwards

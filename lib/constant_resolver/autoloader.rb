@@ -23,6 +23,10 @@ module ConstantResolver
       @file_map[fully_qualified_constant]
     end
 
+    def autovivified?(name)
+      !name.end_with?(".rb")
+    end
+
     private
 
     # Maps constant names to file paths.
@@ -53,7 +57,7 @@ module ConstantResolver
             duplicate_files[const_name] << root_relative_path
           end
 
-          # Autovivify any parts othe constant's namespace that haven't already been autoloaded or
+          # Autovivify any parts of the constant's namespace that haven't already been autoloaded or
           # already autovivified
           until const_path == "."
             const_path = File.dirname(const_path)
@@ -82,10 +86,6 @@ module ConstantResolver
       end
 
       file_map
-    end
-
-    def autovivified?(name)
-      !name.end_with?(".rb")
     end
 
     def ambiguous_constant_message(const_name, paths)
