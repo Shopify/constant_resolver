@@ -4,3 +4,4 @@ owners:
 - Shopify/component-patterns
 slack_channels:
 - architecture-patterns
+ci_url: https://github.com/Shopify/constant_resolver/actions?query=workflow%3ACI
