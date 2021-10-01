@@ -77,6 +77,17 @@ class ConstantResolver
       assert_equal("app/public/sales/errors.rb", constant.location)
     end
 
+    def test_resolves_constant_to_most_specific_file_path
+      sales_entry_constant = @resolver.resolve("Sales::Entry")
+      sales_constant = @resolver.resolve("Sales")
+
+      assert_equal("::Sales::Entry", sales_entry_constant.name)
+      assert_equal("::Sales", sales_constant.name)
+
+      assert_equal("app/models/sales/entry.rb", sales_entry_constant.location)
+      assert_equal("app/models/sales.rb", sales_constant.location)
+    end
+
     def test_discovers_constants_using_custom_inflector
       constant = @resolver.resolve("GraphQL::QueryRoot")
 
