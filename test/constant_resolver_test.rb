@@ -19,8 +19,10 @@ class ConstantResolver
     end
 
     def setup
+      fixture_root_path = "test/fixtures/constant_discovery/valid/"
+      Dir[File.join(fixture_root_path, "**/*.rb")].each { |f| require File.expand_path(f) }
       @resolver = ConstantResolver.new(
-        root_path: "test/fixtures/constant_discovery/valid/",
+        root_path: fixture_root_path,
         load_paths: [
           "app/public",
           "app/models",

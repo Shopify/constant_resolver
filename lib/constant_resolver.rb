@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "constant_resolver/version"
+require "active_support/core_ext/string"
 
 # Get information about (partially qualified) constants without loading the application code.
 # We infer the fully qualified name and the filepath.
@@ -143,10 +144,22 @@ class ConstantResolver
     end
   end
 
+  def lookup_in_file_map(constant_name)
+    file_map[constant_name]
+  end
+
+  def lookup_in_ruby_space(constant_name)
+    file_map # makes sure the file structure makes sense
+    if constant_name.safe_constantize
+      full_path = Module.const_source_location(constant_name).first
+      Pathname.new(full_path).relative_path_from(File.expand_path(@root_path)).to_s
+    end
+  end
+
   def resolve_traversing_namespace_path(const_name, current_namespace_path)
     fully_qualified_name_guess = (current_namespace_path + [const_name]).join("::")
 
-    location = file_map[fully_qualified_name_guess]
+    location = lookup_in_ruby_space(fully_qualified_name_guess)
     if location || fully_qualified_name_guess == const_name
       [current_namespace_path, location]
     else
