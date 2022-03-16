@@ -41,10 +41,9 @@ class ConstantResolver
   #   )
   def initialize(root_path:, load_paths:, inflector: DefaultInflector.new)
     root_path += "/" unless root_path.end_with?("/")
-    load_paths = load_paths.map { |p| p.end_with?("/") ? p : p + "/" }.uniq
 
     @root_path = root_path
-    @load_paths = load_paths
+    @load_paths = coerce_load_paths(load_paths)
     @file_map = nil
     @inflector = inflector
   end
@@ -76,10 +75,11 @@ class ConstantResolver
     @file_map = {}
     duplicate_files = {}
 
-    @load_paths.each do |load_path|
+    @load_paths.each_pair do |load_path, default_ns|
       Dir[glob_path(load_path)].each do |file_path|
         root_relative_path = file_path.delete_prefix!(@root_path)
         const_name = @inflector.camelize(root_relative_path.delete_prefix(load_path).delete_suffix!(".rb"))
+        const_name = "#{default_ns}::#{const_name}" unless default_ns == "Object"
         existing_entry = @file_map[const_name]
 
         if existing_entry
@@ -102,7 +102,7 @@ class ConstantResolver
       raise(Error, <<~MSG)
         Could not find any ruby files. Searched in:
 
-        - #{@load_paths.map { |load_path| glob_path(load_path) }.join("\n- ")}
+        - #{@load_paths.keys.map { |load_path| glob_path(load_path) }.join("\n- ")}
       MSG
     end
 
@@ -118,6 +118,15 @@ class ConstantResolver
   end
 
   private
+
+  def coerce_load_paths(load_paths)
+    load_paths = Hash[load_paths.map { |p| [p, "Object"] }] unless load_paths.respond_to?(:transform_keys)
+
+    load_paths.transform_keys! { |p| p.end_with?("/") ? p : p + "/" }
+    load_paths.transform_values! { |ns| ns.delete_prefix("::") }
+
+    load_paths
+  end
 
   def ambiguous_constant_message(const_name, paths)
     <<~MSG.chomp
