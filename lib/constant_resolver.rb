@@ -123,7 +123,7 @@ class ConstantResolver
     load_paths = Hash[load_paths.map { |p| [p, "Object"] }] unless load_paths.respond_to?(:transform_keys)
 
     load_paths.transform_keys! { |p| p.end_with?("/") ? p : p + "/" }
-    load_paths.transform_values! { |ns| ns.delete_prefix("::") }
+    load_paths.transform_values! { |ns| ns.to_s.delete_prefix("::") }
 
     load_paths
   end
