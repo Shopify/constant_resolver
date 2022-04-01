@@ -42,6 +42,31 @@ class ConstantResolver
       assert_equal("app/models/order.rb", constant.location)
     end
 
+    def test_resolves_constants_from_non_default_root_path_namespace
+      Object.const_set(:Api, Module.new)
+
+      resolver = ConstantResolver.new(
+        root_path: "test/fixtures/constant_discovery/valid/",
+        load_paths: {
+          "app/models" => Object,
+          "app/rest_api" => Api,
+          "app/internal" => "::Company::Internal",
+        },
+      )
+
+      constant = resolver.resolve("Order")
+      assert_equal("::Order", constant.name)
+      assert_equal("app/models/order.rb", constant.location)
+
+      constant = resolver.resolve("Api::Repositories")
+      assert_equal("::Api::Repositories", constant.name)
+      assert_equal("app/rest_api/repositories.rb", constant.location)
+
+      constant = resolver.resolve("Company::Internal::Main")
+      assert_equal("::Company::Internal::Main", constant.name)
+      assert_equal("app/internal/main.rb", constant.location)
+    end
+
     def test_resolve_returns_constant_context
       context = @resolver.resolve("Order")
       assert_instance_of(ConstantResolver::ConstantContext, context)
