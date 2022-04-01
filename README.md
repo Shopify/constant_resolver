@@ -36,6 +36,21 @@ resolver = ConstantResolver.new(
 )
 ```
 
+### Default namespaces
+
+If any load paths have a default namespace other than `Object`, these can be specified in a hash:
+
+```ruby
+resolver = ConstantResolver.new(
+  root_path: "/app",
+  load_paths: {
+    "/app/models" => "::Object",
+    "/app/services" => "::Object",
+    "/app/internal" => "::Business",
+  }
+)
+```
+
 ### Resolve a constant
 
 Resolve a constant from the contents of your load paths:
