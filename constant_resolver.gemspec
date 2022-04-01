@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
-lib = File.expand_path("../lib", __FILE__)
-$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require "constant_resolver/version"
+require_relative "lib/constant_resolver/version"
 
 Gem::Specification.new do |spec|
   spec.name          = "constant_resolver"
@@ -22,6 +20,10 @@ Gem::Specification.new do |spec|
     spec.metadata["homepage_uri"] = spec.homepage
     spec.metadata["source_code_uri"] = "https://github.com/Shopify/constant_resolver"
     spec.metadata["changelog_uri"] = "https://github.com/Shopify/constant_resolver/releases"
+    spec.metadata["allowed_push_host"] = "https://rubygems.org"
+  else
+    raise "RubyGems 2.0 or newer is required to protect against " \
+      "public gem pushes."
   end
 
   # Specify which files should be added to the gem when it is released.
