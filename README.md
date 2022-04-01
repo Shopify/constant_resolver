@@ -36,6 +36,8 @@ resolver = ConstantResolver.new(
 )
 ```
 
+### Default namespaces
+
 If any load paths have a default namespace other than `Object`, these can be specified in a hash:
 
 ```ruby
