@@ -6,6 +6,7 @@ class ConstantResolver
   class ResolveTest < Minitest::Test
     class OverrideInflector < DefaultInflector
       def initialize(overrides)
+        super()
         @overrides = overrides
       end
 
