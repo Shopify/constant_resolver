@@ -8,11 +8,11 @@ git_source(:github) { |repo_name| "https://github.com/#{repo_name}" }
 gemspec
 
 group :deployment do
-  gem 'rake'
+  gem "rake"
 end
 
 group :development do
-  gem 'rubocop', require: false
-  gem 'rubocop-performance', require: false
-  gem 'rubocop-shopify', require: false
+  gem "rubocop", require: false
+  gem "rubocop-performance", require: false
+  gem "rubocop-shopify", require: false
 end

@@ -72,6 +72,7 @@ class ConstantResolver
   # @return [Hash<String, String>]
   def file_map
     return @file_map if @file_map
+
     @file_map = {}
     duplicate_files = {}
 
