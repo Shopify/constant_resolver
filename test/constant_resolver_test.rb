@@ -162,7 +162,7 @@ class ConstantResolver
     end
 
     def test_raises_if_ambiguous_file_path_structure
-      resolver = ConstantResolver.new(@resolver.config.merge(
+      resolver = ConstantResolver.new(**@resolver.config.merge(
         root_path: "test/fixtures/constant_discovery/invalid/"
       ))
       begin
@@ -180,7 +180,7 @@ class ConstantResolver
     end
 
     def test_raises_if_no_files
-      resolver = ConstantResolver.new(@resolver.config.merge(
+      resolver = ConstantResolver.new(**@resolver.config.merge(
         root_path: "test/fixtures/constant_discovery/empty/"
       ))
       begin
