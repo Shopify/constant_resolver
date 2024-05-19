@@ -28,7 +28,7 @@ class ConstantResolver
           "app/models/concerns",
           "app/services",
         ],
-        inflector: OverrideInflector.new("graphql" => "GraphQL")
+        inflector: OverrideInflector.new("graphql" => "GraphQL"),
       )
       super
     end
@@ -97,7 +97,7 @@ class ConstantResolver
 
     def test_discovers_constants_that_dont_have_their_own_file_using_their_parent_namespace
       constant = @resolver.resolve(
-        "Sales::Errors::SomethingWentWrong"
+        "Sales::Errors::SomethingWentWrong",
       )
       assert_equal("::Sales::Errors::SomethingWentWrong", constant.name)
       assert_equal("app/public/sales/errors.rb", constant.location)
@@ -124,7 +124,7 @@ class ConstantResolver
     def test_discovers_constants_that_are_partially_qualified_inferring_their_full_qualification_from_parent_namespace
       constant = @resolver.resolve(
         "Errors",
-        current_namespace_path: ["Sales", "SomeEntrypoint"]
+        current_namespace_path: ["Sales", "SomeEntrypoint"],
       )
       assert_equal("::Sales::Errors", constant.name)
       assert_equal("app/public/sales/errors.rb", constant.location)
@@ -133,7 +133,7 @@ class ConstantResolver
     def test_discovers_constants_that_are_both_partially_qualified_and_dont_have_their_own_file
       constant = @resolver.resolve(
         "Errors::SomethingWentWrong",
-        current_namespace_path: ["Sales", "SomeEntrypoint"]
+        current_namespace_path: ["Sales", "SomeEntrypoint"],
       )
       assert_equal("::Sales::Errors::SomethingWentWrong", constant.name)
       assert_equal("app/public/sales/errors.rb", constant.location)
@@ -148,22 +148,22 @@ class ConstantResolver
     def test_respects_colon_colon_prefix_by_resolving_as_top_level_constant
       constant = @resolver.resolve(
         "Entry",
-        current_namespace_path: ["Sales", "SomeEntrypoint"]
+        current_namespace_path: ["Sales", "SomeEntrypoint"],
       )
       assert_equal("::Sales::Entry", constant.name)
       assert_equal("app/models/sales/entry.rb", constant.location)
 
       constant = @resolver.resolve(
         "::Entry",
-        current_namespace_path: ["Sales", "SomeEntrypoint"]
+        current_namespace_path: ["Sales", "SomeEntrypoint"],
       )
       assert_equal("::Entry", constant.name)
       assert_equal("app/models/entry.rb", constant.location)
     end
 
     def test_raises_if_ambiguous_file_path_structure
-      resolver = ConstantResolver.new(@resolver.config.merge(
-        root_path: "test/fixtures/constant_discovery/invalid/"
+      resolver = ConstantResolver.new(**@resolver.config.merge(
+        root_path: "test/fixtures/constant_discovery/invalid/",
       ))
       begin
         e = assert_raises(ConstantResolver::Error) do
@@ -180,8 +180,8 @@ class ConstantResolver
     end
 
     def test_raises_if_no_files
-      resolver = ConstantResolver.new(@resolver.config.merge(
-        root_path: "test/fixtures/constant_discovery/empty/"
+      resolver = ConstantResolver.new(**@resolver.config.merge(
+        root_path: "test/fixtures/constant_discovery/empty/",
       ))
       begin
         e = assert_raises(ConstantResolver::Error) do
