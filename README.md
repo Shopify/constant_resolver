@@ -62,6 +62,23 @@ context.name     # => "::Some::Nested::Model"
 context.location # => "models/some/nested/model.rb"
 ```
 
+### Ignoring paths
+
+You may want to only resolve constants from certain sections of your application. If you want to leave any paths out, use `exclude`:
+
+```ruby
+resolver = ConstantResolver.new(
+  root_path: "/app",
+  load_paths: [
+    "/app/models",
+    "/some/engine/app/models",
+  ],
+  exclude: [
+    "some/engine/**/*"
+  ],
+)
+```
+
 ## Development
 
 After checking out the repo, run `bundle` to install dependencies. Then, run `rake test` to run the tests.
