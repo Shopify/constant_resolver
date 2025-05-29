@@ -13,6 +13,8 @@ require "constant_resolver/version"
 #   have no way of inferring the file it is defined in. You could argue though that inheritance means that another
 #   constant with the same name exists in the inheriting class, and this view is sufficient for all our use cases.
 class ConstantResolver
+  RUBY_FILES_GLOB = "**/*.rb"
+
   class Error < StandardError; end
   class ConstantContext < Struct.new(:name, :location); end
 
@@ -25,10 +27,12 @@ class ConstantResolver
     end
   end
 
+  private_constant :RUBY_FILES_GLOB
   private_constant :DefaultInflector
 
   # @param root_path [String] The root path of the application to analyze
   # @param load_paths [Array<String>] The autoload paths of the application.
+  # @param exclude [Array<String>] Paths to exclude to scan for constants.
   # @param inflector [Object] Any object that implements a `camelize` function.
   #
   # @example usage in a Rails app
@@ -39,13 +43,14 @@ class ConstantResolver
   #     root_path: Rails.root.to_s,
   #     load_paths: load_paths
   #   )
-  def initialize(root_path:, load_paths:, inflector: DefaultInflector.new)
+  def initialize(root_path:, load_paths:, exclude: [], inflector: DefaultInflector.new)
     root_path += "/" unless root_path.end_with?("/")
 
     @root_path = root_path
     @load_paths = coerce_load_paths(load_paths)
     @file_map = nil
     @inflector = inflector
+    @exclude = exclude
   end
 
   # Resolve a constant via its name.
@@ -87,7 +92,10 @@ class ConstantResolver
           duplicate_files[const_name] ||= [existing_entry]
           duplicate_files[const_name] << root_relative_path
         end
-        @file_map[const_name] = root_relative_path
+
+        if allowed?(root_relative_path)
+          @file_map[const_name] = root_relative_path
+        end
       end
     end
 
@@ -120,6 +128,10 @@ class ConstantResolver
 
   private
 
+  def allowed?(path)
+    !@exclude.any? { |glob| File.fnmatch(glob, path, File::FNM_EXTGLOB | File::FNM_PATHNAME) }
+  end
+
   def coerce_load_paths(load_paths)
     load_paths = Hash[load_paths.map { |p| [p, "Object"] }] unless load_paths.respond_to?(:transform_keys)
 
@@ -137,7 +149,7 @@ class ConstantResolver
   end
 
   def glob_path(path)
-    @root_path + path + "**/*.rb"
+    File.join(@root_path, path, RUBY_FILES_GLOB)
   end
 
   def resolve_constant(const_name, current_namespace_path, original_name: const_name)

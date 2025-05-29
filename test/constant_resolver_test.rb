@@ -197,5 +197,14 @@ class ConstantResolver
         MSG
       end
     end
+
+    def test_respects_exclude
+      resolver = ConstantResolver.new(**@resolver.config.merge(
+        exclude: ["app/models/**/*"],
+      ))
+
+      constant = resolver.resolve("Order")
+      assert_nil(constant)
+    end
   end
 end
