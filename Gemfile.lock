@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    constant_resolver (0.2.0)
+    constant_resolver (0.3.0)
 
 GEM
   remote: https://rubygems.org/
